@@ -42,7 +42,33 @@ Para que tu terminal reconozca a Flutter:
    ```bash
    mkdir C:\Users\tu_usuario\develop\apps
    cd C:\Users\tu_usuario\develop\apps
-   
+
+
+Clona este repositorio:
+
+```
+git clone [https://github.com/MateoCanales007/Pasaporte-Misionero-CMO.git](https://github.com/MateoCanales007/Pasaporte-Misionero-CMO.git)
+```
+Navega hacia el interior del proyecto:
+
+```cd Pasaporte-Misionero-CMO```
+
+### 5. Restaurar Dependencias (Importante)
+El repositorio no incluye librerías pesadas. Para descargar las dependencias exactas del proyecto (Firebase, escáner, etc.), ejecuta:
+
+```flutter pub get```
+
+### 6. Ejecutar la Aplicación
+En la barra inferior derecha de VS Code, haz clic donde dice "No Device" o "Windows".
+
+Seleccione Google o un emulador de Android (previamente configurado en Android Studio) o conecta tu teléfono físico mediante USB con la depuración activada.
+
+Presiona la tecla F5 (o ve a Run > Start Debugging).
+
+El proyecto se compilará y la app se abrirá en tu dispositivo.
+
+
+
 A new Flutter project.
 
 ## Getting Started
