@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "460417444897",
+    "project_id": "pasaportemisionerovirtual",
+    "storage_bucket": "pasaportemisionerovirtual.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460417444897:android:c3881f86673176b8470760",
+        "android_client_info": {
+          "package_name": "com.cmo.pasaporte_misionero_cmo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQwE1fwXoTBKttsdbQU9iySh3RnoFMvbg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
