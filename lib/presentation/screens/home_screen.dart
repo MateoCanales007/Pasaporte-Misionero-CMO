@@ -147,7 +147,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF0E2C74),
         unselectedItemColor: Colors.blueGrey[300],
-        currentIndex: 0,
+        currentIndex: _isOpen ? 1 : 0,
+        onTap: (index) {
+          if (index == 0) setState(() => _isOpen = false);
+          if (index == 1) setState(() => _isOpen = true);
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Pasaporte'),
           BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Misiones'),
@@ -283,54 +287,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           final Timestamp dateObtainedValue = currentStamp['dateObtained'] ?? Timestamp.now();
 
                           final catalogInfo = stampCatalog[stampId];
-                          final String countryName = catalogInfo?['isoCode'] ?? 'Nación';
-                          final String infoDescription = catalogInfo?['name'] ?? 'Proyecto Misionero';
+                          final String stampName = catalogInfo?['name'] ?? 'Proyecto Misionero';
+                          final String? stampImageUrl = catalogInfo?['image'];
 
                           final dateStr = "${dateObtainedValue.toDate().day}/${dateObtainedValue.toDate().month}/${dateObtainedValue.toDate().year}";
 
                           return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
+                            margin: const EdgeInsets.only(bottom: 12),
                             color: Colors.white,
                             elevation: 2,
                             shadowColor: Colors.black.withOpacity(0.08),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 60,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFDBE1FF),
-                                    borderRadius: BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: stampImageUrl != null && stampImageUrl.isNotEmpty
+                                        ? Image.network(
+                                            stampImageUrl,
+                                            width: 64,
+                                            height: 64,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stack) => Container(
+                                              width: 64,
+                                              height: 64,
+                                              color: const Color(0xFFDBE1FF),
+                                              child: const Icon(Icons.flight_land, size: 28, color: Color(0xFF0E2C74)),
+                                            ),
+                                          )
+                                        : Container(
+                                            width: 64,
+                                            height: 64,
+                                            color: const Color(0xFFDBE1FF),
+                                            child: const Icon(Icons.flight_land, size: 28, color: Color(0xFF0E2C74)),
+                                          ),
                                   ),
-                                  child: const Center(child: Icon(Icons.flight_land, size: 30, color: Color(0xFF0E2C74))),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(countryName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0E2C74))),
-                                          const Icon(Icons.verified, color: Color(0xFFC7A941)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(infoDescription, style: const TextStyle(fontSize: 14, color: Color(0xFF865300), fontWeight: FontWeight.w500)),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          const Text('SELLO OFICIAL', style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1)),
-                                          Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                        ],
-                                      ),
-                                    ],
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(stampName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0E2C74))),
+                                        const SizedBox(height: 4),
+                                        Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                      ],
+                                    ),
                                   ),
-                                )
-                              ],
+                                  const Icon(Icons.verified, color: Color(0xFFC7A941), size: 20),
+                                ],
+                              ),
                             ),
                           );
                         },
