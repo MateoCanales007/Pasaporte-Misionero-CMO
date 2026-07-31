@@ -40,10 +40,18 @@ dependencies:
   flutter_login: ^7.0.0
   font_awesome_flutter: ^11.0.0
   flutter_riverpod: ^3.3.2
+  mobile_scanner: ^7.2.0
+  qr_flutter: ^4.1.0
+  google_maps_flutter: ^2.17.1
+  http: ^1.6.0
+  universal_html: ^2.3.0
+  cloud_functions: ^6.3.3
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -93,3 +101,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/cmo_icon.png"
