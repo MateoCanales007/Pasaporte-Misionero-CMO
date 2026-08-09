@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/providers/cell_provider.dart';
 
@@ -14,18 +15,22 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
 
+  final TextEditingController _customNationalityController = TextEditingController();
+  final TextEditingController _customCellController = TextEditingController();
+
   DateTime? _selectedDate;
   String? _selectedNationality;
   String? _selectedCellId;
+
+  bool _isCustomNationality = false;
+  bool _isCustomCell = false;
   bool _isLoading = false;
 
-  // Lista estática de nacionalidades sugeridas (No gasta base de datos)
   final List<String> _nationalities = [
     'Salvadoreña', 'Guatemalteca', 'Hondureña', 'Mexicana',
     'Estadounidense', 'Colombiana', 'Costarricense', 'Nicaragüense', 'Otra'
   ];
 
-  // Dispara el Calendario Nativo del Sistema Operativo
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -51,15 +56,16 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
     if (_formKey.currentState!.validate() && _selectedDate != null) {
       setState(() => _isLoading = true);
 
+      final String finalNationality = _isCustomNationality ? _customNationalityController.text.trim() : _selectedNationality!;
+      final String finalCellId = _isCustomCell ? _customCellController.text.trim() : _selectedCellId!;
+
       try {
         await AuthRepository().createPassport(
           fullName: _nameController.text.trim(),
           dateOfBirth: _selectedDate!,
-          nationality: _selectedNationality!,
-          cellId: _selectedCellId!,
+          nationality: finalNationality,
+          cellId: finalCellId,
         );
-        // ¡LA MAGIA DE RIVERPOD! Al crear el documento en Firebase, el `SessionRouter`
-        // lo detectará automáticamente y te cambiará al `HomeScreen` sin hacer Navigator.push.
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
         setState(() => _isLoading = false);
@@ -74,15 +80,25 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
     final cellsAsync = ref.watch(cellsStreamProvider);
 
     return Scaffold(
+      // ✨ Fondo devuelto a un color claro
       backgroundColor: const Color(0xFFF4F7FB),
       appBar: AppBar(
         title: const Text('Completa tu Pasaporte', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0E2C74),
         elevation: 0,
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Cerrar Sesión',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+          )
+        ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF0E2C74)))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -90,8 +106,6 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.badge, size: 60, color: Color(0xFFC7A941)),
-              const SizedBox(height: 20),
               const Text(
                 'Último paso',
                 textAlign: TextAlign.center,
@@ -105,12 +119,11 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
               ),
               const SizedBox(height: 30),
 
-              // 1. INPUT DE TEXTO: NOMBRE COMPLETO
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: 'Nombre Completo',
-                  prefixIcon: const Icon(Icons.person),
+                  prefixIcon: const Icon(Icons.person, color: Color(0xFF0E2C74)),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -119,20 +132,20 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 2. INPUT DE CALENDARIO NATIVO
+              // ✨ FECHA DE NACIMIENTO COMO PLACEHOLDER
               InkWell(
                 onTap: _pickDate,
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Fecha de Nacimiento',
-                    prefixIcon: const Icon(Icons.calendar_month),
+                    // Quitamos el labelText para que no flote hacia arriba
+                    prefixIcon: const Icon(Icons.calendar_month, color: Color(0xFF0E2C74)),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   ),
                   child: Text(
                     _selectedDate == null
-                        ? 'Selecciona una fecha'
+                        ? 'Fecha de Nacimiento' // Actúa como Placeholder
                         : '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}',
                     style: TextStyle(color: _selectedDate == null ? Colors.grey[600] : Colors.black87, fontSize: 16),
                   ),
@@ -140,11 +153,10 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 3. SELECT DINÁMICO: NACIONALIDAD (Lista Estática)
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Nacionalidad',
-                  prefixIcon: const Icon(Icons.flag),
+                  prefixIcon: const Icon(Icons.flag, color: Color(0xFF0E2C74)),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -152,43 +164,84 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
                 items: _nationalities.map((String nat) {
                   return DropdownMenuItem(value: nat, child: Text(nat));
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedNationality = val),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedNationality = val;
+                    _isCustomNationality = (val == 'Otra');
+                  });
+                },
                 validator: (v) => v == null ? 'Requerido' : null,
               ),
+
+              if (_isCustomNationality) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _customNationalityController,
+                  decoration: InputDecoration(
+                    labelText: 'Escribe tu Nacionalidad',
+                    prefixIcon: const Icon(Icons.edit, color: Color(0xFF0E2C74)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Escribe tu nacionalidad' : null,
+                ),
+              ],
               const SizedBox(height: 16),
 
-              // 4. SELECT DINÁMICO: CÉLULAS (Directo de Firestore NoSQL)
               cellsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => Text('Error cargando células: $e'),
+                loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF0E2C74))),
+                error: (e, s) => Text('Error cargando células: $e', style: const TextStyle(color: Colors.red)),
                 data: (cells) {
+                  List<DropdownMenuItem<String>> cellItems = cells.map((cell) {
+                    return DropdownMenuItem<String>(value: cell['id'], child: Text(cell['name']!));
+                  }).toList();
+                  cellItems.add(const DropdownMenuItem(value: 'otra', child: Text('Otra / Aún no tengo')));
+
                   return DropdownButtonFormField<String>(
                     decoration: InputDecoration(
                       labelText: 'Célula a la que perteneces',
-                      prefixIcon: const Icon(Icons.group_work),
+                      prefixIcon: const Icon(Icons.group_work, color: Color(0xFF0E2C74)),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     ),
-                    items: cells.map((cell) {
-                      return DropdownMenuItem(value: cell['id'], child: Text(cell['name']!));
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedCellId = val),
+                    items: cellItems,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedCellId = val;
+                        _isCustomCell = (val == 'otra');
+                      });
+                    },
                     validator: (v) => v == null ? 'Requerido' : null,
                   );
                 },
               ),
+
+              if (_isCustomCell) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _customCellController,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre de la célula / o escribe "Ninguna"',
+                    prefixIcon: const Icon(Icons.edit, color: Color(0xFF0E2C74)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Por favor escribe un valor' : null,
+                ),
+              ],
               const SizedBox(height: 40),
 
-              // BOTÓN DE GUARDAR
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFDB65D), // Color dorado/naranja
+                  backgroundColor: const Color(0xFF0E2C74),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: _saveProfile,
-                child: const Text('GENERAR PASAPORTE', style: TextStyle(color: Color(0xFF2B1700), fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
+                child: const Text('GENERAR PASAPORTE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
               ),
             ],
           ),
