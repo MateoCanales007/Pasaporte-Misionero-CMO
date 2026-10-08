@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="pasaporte_misionero_cmo"
+        android:label="Pasaporte CMO"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -25,11 +25,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- Clave de Google Maps para Android (pública). Debe estar restringida al paquete
+             com.cmo.pasaporte_misionero_cmo y a sus huellas SHA (ver docs/SEGURIDAD.md). -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDQwE1fwXoTBKttsdbQU9iySh3RnoFMvbg" />
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
