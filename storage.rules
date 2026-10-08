@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// Reglas de Cloud Storage — Pasaporte Misionero CMO (docs/ARQUITECTURA.md, sección 4).
+// Solo existen dos carpetas: portadas de prédicas e imágenes de misiones. Todo lo demás se deniega.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.get('role', 'user') == 'admin';
+    }
+
+    // Nombre de archivo seguro: letras, dígitos, punto, guion y guion bajo (1..100), sin ser
+    // solo puntos ('.' o '..').
+    function isSafeFileName(fileName) {
+      return fileName.matches('^[A-Za-z0-9._-]{1,100}$')
+        && !fileName.matches('^[.]+$');
+    }
+
+    // Imagen JPEG/PNG/WebP de menos de 5 MB.
+    function isValidImageUpload(fileName) {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('^image/(jpeg|png|webp)$')
+        && isSafeFileName(fileName);
+    }
+
+    match /sermon_covers/{sermonId}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() && isValidImageUpload(fileName);
+      allow delete: if isAdmin();
+    }
+
+    match /mission_images/{missionId}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() && isValidImageUpload(fileName);
+      allow delete: if isAdmin();
+    }
+
+    // Fotos del culto de cada misión: las ve cualquier usuario autenticado
+    // (incluye listar la carpeta); solo los administradores suben o borran.
+    // El original se guarda en su calidad completa (hasta 25 MB) para poder
+    // descargarlo; la app muestra una copia liviana (_preview).
+    match /mission_service_photos/{missionId}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.contentType.matches('^image/(jpeg|png|webp)$')
+        && isSafeFileName(fileName);
+      allow delete: if isAdmin();
+    }
+
+    // Cualquier otra ruta: denegada (no hay regla que la permita).
+  }
+}
