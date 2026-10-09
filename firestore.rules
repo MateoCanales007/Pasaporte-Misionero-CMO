@@ -1,0 +1,348 @@
+rules_version = '2';
+
+// Reglas de seguridad de Cloud Firestore — Pasaporte Misionero CMO.
+// Contrato: docs/ARQUITECTURA.md. Denegado por defecto: toda ruta que no aparezca aquí queda
+// cerrada para el cliente. Los datos sensibles (sellos, roles, contadores, perfiles públicos,
+// canjes) solo los escribe Cloud Functions con el Admin SDK, que no pasa por estas reglas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // Autenticación y roles (custom claim `role`)
+    // ------------------------------------------------------------------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Rol del claim; sin claim equivale a 'user'. Usar solo tras signedIn().
+    function role() {
+      return request.auth.token.get('role', 'user');
+    }
+
+    function isAdmin() {
+      return signedIn() && role() == 'admin';
+    }
+
+    // ------------------------------------------------------------------
+    // Validadores genéricos
+    // ------------------------------------------------------------------
+    function isStr(v, minLen, maxLen) {
+      return v is string && v.size() >= minLen && v.size() <= maxLen;
+    }
+
+    function isHttpsUrl(v, maxLen) {
+      return v is string
+        && v.size() <= maxLen
+        && v.matches('^https://[^\\s/?#]+([/?#][^\\s]*)?$');
+    }
+
+    // '' o URL https.
+    function isEmptyOrHttpsUrl(v, maxLen) {
+      return v == '' || isHttpsUrl(v, maxLen);
+    }
+
+    function isNullOrStr(v, maxLen) {
+      return v == null || isStr(v, 0, maxLen);
+    }
+
+    function isNullOrTimestamp(v) {
+      return v == null || v is timestamp;
+    }
+
+    // Fechas heredadas: Timestamp o cadena ISO-8601.
+    function isDateLike(v) {
+      return v is timestamp || isStr(v, 1, 40);
+    }
+
+    // Campo opcional: si existe debe ser bool.
+    function optBool(d, key) {
+      return !(key in d) || d[key] is bool;
+    }
+
+    // Campo opcional: si existe debe ser request.time.
+    function optNow(d, key) {
+      return !(key in d) || d[key] == request.time;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ------------------------------------------------------------------
+    // user_passport/{uid} — perfil privado
+    // ------------------------------------------------------------------
+    function passportCreateKeys() {
+      return ['id', 'username', 'passportNumber', 'fullName', 'nationality', 'dateOfBirth',
+              'cellId', 'dateOfIssue', 'stamps', 'communityVisible', 'showNationality',
+              'showCell', 'notificationPrefs', 'createdAt', 'updatedAt'];
+    }
+
+    function passportOwnerEditableKeys() {
+      return ['fullName', 'nationality', 'cellId', 'communityVisible', 'showNationality',
+              'showCell', 'notificationPrefs', 'updatedAt'];
+    }
+
+    function validNotificationPrefs(p) {
+      return p is map
+        && p.keys().hasOnly(['newMission', 'missionReminder', 'newSermon', 'stampConfirmed'])
+        && p.get('newMission', false) is bool
+        && p.get('missionReminder', false) is bool
+        && p.get('newSermon', false) is bool
+        && p.get('stampConfirmed', false) is bool;
+    }
+
+    function validFullName(v) {
+      return isStr(v, 1, 80);
+    }
+
+    function validNationality(v) {
+      return isStr(v, 1, 60);
+    }
+
+    function validCellId(v) {
+      return isStr(v, 0, 80);
+    }
+
+    function validPassportCreate(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(passportCreateKeys())
+        && d.keys().hasAll(['id', 'username', 'passportNumber', 'fullName', 'nationality', 'cellId'])
+        && d.id == uid
+        && isStr(d.username, 1, 64)
+        && d.username + '@cmo.com' == request.auth.token.email
+        && isStr(d.passportNumber, 1, 32)
+        && d.passportNumber.matches('^PM-[0-9]{4}-[A-Z0-9]{4,12}$')
+        && validFullName(d.fullName)
+        && validNationality(d.nationality)
+        && validCellId(d.cellId)
+        && (!('dateOfBirth' in d) || isDateLike(d.dateOfBirth))
+        && (!('dateOfIssue' in d) || isDateLike(d.dateOfIssue))
+        && (!('stamps' in d) || (d.stamps is list && d.stamps.size() == 0))
+        && optBool(d, 'communityVisible')
+        && optBool(d, 'showNationality')
+        && optBool(d, 'showCell')
+        && (!('notificationPrefs' in d) || validNotificationPrefs(d.notificationPrefs))
+        && optNow(d, 'createdAt')
+        && optNow(d, 'updatedAt');
+    }
+
+    // En update solo se validan los campos que cambian: así un documento heredado con datos
+    // antiguos puede seguir editándose sin tener que corregir campos que el usuario no toca.
+    // Eliminar un campo cuenta como cambio y falla la validación (el campo ya no existe).
+    function validPassportUpdate() {
+      let d = request.resource.data;
+      let k = changedKeys();
+      return k.hasOnly(passportOwnerEditableKeys())
+        && (!('fullName' in k) || validFullName(d.fullName))
+        && (!('nationality' in k) || validNationality(d.nationality))
+        && (!('cellId' in k) || validCellId(d.cellId))
+        && (!('communityVisible' in k) || d.communityVisible is bool)
+        && (!('showNationality' in k) || d.showNationality is bool)
+        && (!('showCell' in k) || d.showCell is bool)
+        && (!('notificationPrefs' in k) || validNotificationPrefs(d.notificationPrefs))
+        && (!('updatedAt' in k) || d.updatedAt == request.time);
+    }
+
+    match /user_passport/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && validPassportCreate(uid);
+      allow update: if isOwner(uid) && validPassportUpdate();
+      allow delete: if false;
+
+      // Sellos obtenidos: solo los escribe el servidor (redeemStamp / migración).
+      match /redemptions/{missionId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
+      }
+
+      // Diario privado: solo el dueño.
+      match /journal/{entryId} {
+        function validJournal(d) {
+          return d.keys().hasOnly(['text', 'missionId', 'missionName', 'createdAt', 'updatedAt'])
+            && d.keys().hasAll(['text', 'createdAt', 'updatedAt'])
+            && isStr(d.text, 1, 5000)
+            && isNullOrStr(d.get('missionId', null), 120)
+            && isNullOrStr(d.get('missionName', null), 120);
+        }
+
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && validJournal(request.resource.data)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if isOwner(uid)
+          && validJournal(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      // Tokens FCM del dispositivo: el id del documento es el propio token.
+      match /fcm_tokens/{tokenId} {
+        function validFcmToken(d) {
+          return d.keys().hasOnly(['token', 'platform', 'updatedAt'])
+            && d.keys().hasAll(['token', 'platform', 'updatedAt'])
+            && isStr(d.token, 1, 4096)
+            && d.token == tokenId
+            && d.platform in ['android', 'web', 'ios']
+            && d.updatedAt == request.time;
+        }
+
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validFcmToken(request.resource.data);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // public_profiles/{uid} — generado por onUserPassportWritten (S)
+    // Los usuarios normales deben consultar con where('communityVisible', '==', true).
+    // ------------------------------------------------------------------
+    match /public_profiles/{uid} {
+      allow get, list: if signedIn()
+        && (isAdmin() || isOwner(uid) || resource.data.communityVisible == true);
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Catálogos: misiones/sellos y células (S)
+    // ------------------------------------------------------------------
+    match /stamp/{missionId} {
+      allow read: if signedIn();
+      allow write: if false; // solo saveMission / setMissionStatus
+    }
+
+    match /cell/{cellId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // sermons/{sermonId} — prédicas (A)
+    // `announcedAt` es solo del servidor: el cliente no puede crearlo ni modificarlo, pero un
+    // update que lo deja intacto debe pasar.
+    // ------------------------------------------------------------------
+    function sermonKeys() {
+      return ['sourceUrl', 'title', 'coverImageUrl', 'coverStoragePath', 'thumbnailUrl',
+              'platform', 'domain', 'externalVideoId', 'publishedAt', 'active', 'deleted',
+              'deletedAt', 'sortOrder', 'createdBy', 'createdAt', 'updatedBy', 'updatedAt'];
+    }
+
+    function sermonRequiredKeys() {
+      return ['sourceUrl', 'title', 'coverImageUrl', 'thumbnailUrl', 'platform', 'domain',
+              'publishedAt', 'active', 'deleted', 'createdBy', 'createdAt', 'updatedBy',
+              'updatedAt'];
+    }
+
+    function validCoverStoragePath(p, sermonId) {
+      return p == null
+        || (isStr(p, 1, 300)
+            && p.matches('^sermon_covers/[^/]+/.+$')
+            && p.split('/')[1] == sermonId);
+    }
+
+    function validSermonData(d, sermonId) {
+      return d.keys().hasAll(sermonRequiredKeys())
+        && isHttpsUrl(d.sourceUrl, 2048)
+        && isStr(d.title, 1, 200)
+        && isEmptyOrHttpsUrl(d.coverImageUrl, 2048)
+        && isEmptyOrHttpsUrl(d.thumbnailUrl, 2048)
+        && validCoverStoragePath(d.get('coverStoragePath', null), sermonId)
+        && d.platform in ['youtube', 'vimeo', 'facebook', 'other']
+        && isStr(d.domain, 0, 253)
+        && isNullOrStr(d.get('externalVideoId', null), 64)
+        && d.publishedAt is timestamp
+        && d.active is bool
+        && d.deleted is bool
+        && (d.deleted == false || d.active == false)
+        && isNullOrTimestamp(d.get('deletedAt', null))
+        && (!('sortOrder' in d) || d.sortOrder is int)
+        && d.updatedBy == request.auth.uid
+        && d.updatedAt == request.time;
+    }
+
+    match /sermons/{sermonId} {
+      allow read: if signedIn() && (isAdmin() || resource.data.active == true);
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(sermonKeys())
+        && validSermonData(request.resource.data, sermonId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly(sermonKeys().concat(['announcedAt']))
+        && !('announcedAt' in changedKeys())
+        && validSermonData(request.resource.data, sermonId)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      // La app usa borrado lógico (`deleted`), pero el admin conserva el borrado definitivo.
+      allow delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------
+    // testimonials/{id} — testimonios moderados
+    // ------------------------------------------------------------------
+    match /testimonials/{testimonialId} {
+      allow read: if signedIn()
+        && (resource.data.status == 'approved'
+            || resource.data.userId == request.auth.uid
+            || isAdmin());
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+             ['userId', 'displayName', 'text', 'missionId', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['userId', 'displayName', 'text', 'status', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && isStr(request.resource.data.text, 10, 1000)
+        && isStr(request.resource.data.displayName, 1, 80)
+        && isNullOrStr(request.resource.data.get('missionId', null), 120)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isAdmin()
+        && changedKeys().hasOnly(['status', 'moderatedBy', 'moderatedAt'])
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.moderatedBy == request.auth.uid
+        && request.resource.data.moderatedAt == request.time;
+
+      allow delete: if signedIn()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ------------------------------------------------------------------
+    // Colecciones solo-servidor
+    // ------------------------------------------------------------------
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /deletion_requests/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    match /recovery_codes/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /notification_log/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /_migrations/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /rate_limits/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Cualquier otra ruta: denegada (no hay regla que la permita).
+  }
+}

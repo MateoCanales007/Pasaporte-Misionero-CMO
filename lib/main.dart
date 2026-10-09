@@ -1,49 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'firebase_options.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
-import 'presentation/screens/auth_screen.dart';
-import 'presentation/screens/session_router.dart';
+import 'app.dart';
+import 'bootstrap/firebase_bootstrap.dart';
+import 'presentation/providers/repository_providers.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
+
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    runApp(const ProviderScope(child: PasaporteApp()));
-  } catch (e) {
-    debugPrint("Error crítico en inicialización: $e");
+    await initializeFirebase();
+  } catch (error) {
+    debugPrint('Error crítico en inicialización: $error');
+    runApp(const StartupErrorApp());
+    return;
   }
-}
 
-class PasaporteApp extends StatelessWidget {
-  const PasaporteApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasaporte Misionero CMO',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        primaryColor: const Color(0xFF0E2C74),
-      ),
-      // ✨ LA SOLUCIÓN: Revisamos el estado de sesión SOLO UNA VEZ.
-      // Esto evita que la pantalla se destruya de golpe al loguearse,
-      // dándole tiempo a flutter_login de hacer su animación del cuadrado.
-      home: FutureBuilder<User?>(
-        future: FirebaseAuth.instance.authStateChanges().first,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(backgroundColor: Color(0xFF0E2C74));
-          }
-          if (snapshot.hasData && snapshot.data != null) {
-            return const SessionRouter();
-          }
-          return AuthScreen();
-        },
-      ),
-    );
+  var version = 'dev';
+  try {
+    version = (await PackageInfo.fromPlatform()).version;
+  } catch (_) {
+    // La versión solo se usa para auditoría; no es crítica.
   }
+
+  runApp(ProviderScope(overrides: [appVersionProvider.overrideWithValue(version)], child: const PasaporteApp()));
 }
