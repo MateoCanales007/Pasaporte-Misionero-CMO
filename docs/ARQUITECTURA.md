@@ -149,6 +149,22 @@ Lectura: autenticado si `active == true`; admin siempre.
 | `updatedAt` | timestamp (`== request.time`) |
 | `announcedAt` | timestamp (solo servidor) |
 
+### `stamp/{missionId}/photos/{photoId}` y `sermons/{sermonId}/photos/{photoId}` — fotos del culto (A)
+Registro de cada foto del culto; los archivos están en Storage (sección 4). La app lee esta lista
+en lugar de listar carpetas de Storage, que fallaba en algunos navegadores del teléfono.
+`photoId` es el nombre del archivo original sin extensión (`culto_<ms>`).
+- Leer: autenticado.
+- Crear: solo admin, con los campos de abajo. Modificar: nadie. Borrar: admin.
+
+| Campo | Tipo |
+|---|---|
+| `url` | string https ≤ 2048 (copia liviana, o el original si no hay copia) |
+| `originalUrl` | string https ≤ 2048 (original en alta calidad) |
+| `storagePath` | string: `mission_service_photos/{missionId}/<archivo>` o `sermon_photos/{sermonId}/<archivo>` |
+| `previewPath` | string (opcional), misma carpeta que `storagePath` |
+| `createdBy` | uid de quien sube |
+| `createdAt` | timestamp (`== request.time`) |
+
 ### `testimonials/{id}` — testimonios moderados
 - Crear: autenticado; `userId == uid`, `status == 'pending'`, `text` 10..1000,
   `displayName` 1..80, `missionId` string\|null, `createdAt == request.time`.
@@ -167,8 +183,8 @@ Lectura: autenticado si `active == true`; admin siempre.
 |---|---|---|
 | `sermon_covers/{sermonId}/{file}` | autenticado | admin; `image/(jpeg\|png\|webp)`; < 5 MB |
 | `mission_images/{missionId}/{file}` | autenticado | admin; `image/(jpeg\|png\|webp)`; < 5 MB |
-| `mission_service_photos/{missionId}/{file}` (fotos del culto de la misión; se listan) | autenticado | admin; `image/(jpeg\|png\|webp)`; original < 25 MB |
-| `sermon_photos/{sermonId}/{file}` (fotos del culto de la prédica; se listan) | autenticado | admin; `image/(jpeg\|png\|webp)`; original < 25 MB |
+| `mission_service_photos/{missionId}/{file}` (fotos del culto de la misión; registro en `stamp/{missionId}/photos`) | autenticado | admin; `image/(jpeg\|png\|webp)`; original < 25 MB |
+| `sermon_photos/{sermonId}/{file}` (fotos del culto de la prédica; registro en `sermons/{sermonId}/photos`) | autenticado | admin; `image/(jpeg\|png\|webp)`; original < 25 MB |
 | todo lo demás | no | no |
 
 ## 5. Token QR

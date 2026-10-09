@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../domain/models/service_photo.dart';
 import '../../providers/content_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../providers/session_providers.dart';
 import '../app_network_image.dart';
 import '../dialogs.dart';
 import '../image_picker_button.dart';
@@ -23,11 +24,16 @@ Future<void> addServicePhotos(
   final picked = await pickImagesForUpload(context, original: true);
   if (picked.isEmpty || !context.mounted) return;
   final repo = ref.read(servicePhotoRepositoryProvider);
+  final editorUid = ref.read(currentUidProvider);
+  if (editorUid == null) {
+    showErrorSnackBar(context, const UnauthenticatedException());
+    return;
+  }
   var uploaded = 0;
   try {
     for (final image in picked) {
       onProgress('Subiendo ${uploaded + 1} de ${picked.length}…');
-      await repo.upload(album, image.bytes, image.contentType);
+      await repo.upload(album, image.bytes, image.contentType, editorUid: editorUid);
       uploaded++;
     }
     if (context.mounted) {
@@ -132,7 +138,7 @@ class _ServicePhotoViewerState extends ConsumerState<_ServicePhotoViewer> {
     if (!confirmed || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(servicePhotoRepositoryProvider).delete(widget.photo);
+      await ref.read(servicePhotoRepositoryProvider).delete(widget.album, widget.photo);
       messenger.showSnackBar(buildAppSnackBar('Foto eliminada.', type: SnackType.success));
       if (mounted) Navigator.pop(context);
     } catch (error) {

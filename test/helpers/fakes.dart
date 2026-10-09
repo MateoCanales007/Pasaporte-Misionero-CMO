@@ -127,18 +127,22 @@ class FakeServicePhotoRepository implements ServicePhotoRepository {
   Future<List<ServicePhoto>> photos(PhotoAlbum album) async => [...?albums[album]];
 
   @override
-  Future<ServicePhoto> upload(PhotoAlbum album, Uint8List original, String contentType) async {
+  Future<ServicePhoto> upload(
+    PhotoAlbum album,
+    Uint8List original,
+    String contentType, {
+    required String editorUid,
+  }) async {
     uploads.add(album);
-    final photo = ServicePhoto(url: '', originalUrl: '', storagePath: '${album.ownerId}/culto_${uploads.length}.jpg');
+    final id = 'culto_${uploads.length}';
+    final photo = ServicePhoto(id: id, url: '', originalUrl: '', storagePath: '${album.ownerId}/$id.jpg');
     (albums[album] ??= []).insert(0, photo);
     return photo;
   }
 
   @override
-  Future<void> delete(ServicePhoto photo) async {
-    for (final list in albums.values) {
-      list.removeWhere((p) => p.storagePath == photo.storagePath);
-    }
+  Future<void> delete(PhotoAlbum album, ServicePhoto photo) async {
+    albums[album]?.removeWhere((p) => p.id == photo.id);
   }
 
   @override

@@ -29,14 +29,22 @@ AppException mapFirebaseError(Object error) {
 
   if (error is FirebaseException) {
     return switch (error.code) {
-      'unavailable' || 'network-request-failed' || 'deadline-exceeded' => const NetworkException(),
+      // Storage agota sus reintentos (`retry-limit-exceeded`) cuando no hay conexión estable.
+      'unavailable' ||
+      'network-request-failed' ||
+      'deadline-exceeded' ||
+      'retry-limit-exceeded' => const NetworkException(),
       'permission-denied' || 'unauthorized' => const PermissionDeniedException(),
       'unauthenticated' || 'unauthenticated-user' => const UnauthenticatedException(),
       'not-found' || 'object-not-found' => const NotFoundException(),
-      _ => const UnknownException(),
+      _ => _unknown(error),
     };
   }
 
+  return _unknown(error);
+}
+
+AppException _unknown(Object error) {
   debugPrint('Error no controlado: $error');
   return const UnknownException();
 }

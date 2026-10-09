@@ -55,7 +55,7 @@ final missionRepositoryProvider = Provider<MissionRepository>(
 );
 
 final servicePhotoRepositoryProvider = Provider<ServicePhotoRepository>(
-  (ref) => FirebaseServicePhotoRepository(FirebaseStorage.instance),
+  (ref) => FirebaseServicePhotoRepository(FirebaseFirestore.instance, FirebaseStorage.instance),
 );
 
 final photoSaverProvider = Provider<PhotoSaver>((ref) => GalPhotoSaver());

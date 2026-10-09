@@ -284,6 +284,49 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------
+    // Fotos del culto: stamp/{missionId}/photos y sermons/{sermonId}/photos (A)
+    // Los archivos están en Storage (`mission_service_photos/` y `sermon_photos/`); aquí solo
+    // el registro de cada foto, para que la app no tenga que listar carpetas de Storage.
+    // ------------------------------------------------------------------
+    function servicePhotoKeys() {
+      return ['url', 'originalUrl', 'storagePath', 'previewPath', 'createdBy', 'createdAt'];
+    }
+
+    // Archivo directo de la carpeta del álbum: '<carpeta>/<ownerId>/<archivo>'.
+    function isAlbumFile(p, folder, ownerId) {
+      return isStr(p, 1, 300)
+        && p.split('/').size() == 3
+        && p.split('/')[0] == folder
+        && p.split('/')[1] == ownerId
+        && p.split('/')[2].size() > 0;
+    }
+
+    function validServicePhoto(d, folder, ownerId) {
+      return d.keys().hasOnly(servicePhotoKeys())
+        && d.keys().hasAll(['url', 'originalUrl', 'storagePath', 'createdBy', 'createdAt'])
+        && isHttpsUrl(d.url, 2048)
+        && isHttpsUrl(d.originalUrl, 2048)
+        && isAlbumFile(d.storagePath, folder, ownerId)
+        && (!('previewPath' in d) || isAlbumFile(d.previewPath, folder, ownerId))
+        && d.createdBy == request.auth.uid
+        && d.createdAt == request.time;
+    }
+
+    match /stamp/{missionId}/photos/{photoId} {
+      allow read: if signedIn();
+      allow create: if isAdmin()
+        && validServicePhoto(request.resource.data, 'mission_service_photos', missionId);
+      allow delete: if isAdmin();
+    }
+
+    match /sermons/{sermonId}/photos/{photoId} {
+      allow read: if signedIn();
+      allow create: if isAdmin()
+        && validServicePhoto(request.resource.data, 'sermon_photos', sermonId);
+      allow delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------
     // testimonials/{id} — testimonios moderados
     // ------------------------------------------------------------------
     match /testimonials/{testimonialId} {

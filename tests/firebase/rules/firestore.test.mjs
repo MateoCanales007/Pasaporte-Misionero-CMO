@@ -961,6 +961,86 @@ describe('sermons', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+describe('fotos del culto (stamp/*/photos y sermons/*/photos)', () => {
+  const ALBUMS = [
+    { label: 'misión', collection: 'stamp/m1/photos', folder: 'mission_service_photos/m1' },
+    { label: 'prédica', collection: 'sermons/sActive/photos', folder: 'sermon_photos/sActive' },
+  ];
+
+  const photoData = (folder, overrides = {}) => ({
+    url: `https://firebasestorage.googleapis.com/v0/b/demo/o/${encodeURIComponent(`${folder}/culto_1_preview.jpg`)}?alt=media&token=t`,
+    originalUrl: `https://firebasestorage.googleapis.com/v0/b/demo/o/${encodeURIComponent(`${folder}/culto_1.jpg`)}?alt=media&token=t`,
+    storagePath: `${folder}/culto_1.jpg`,
+    previewPath: `${folder}/culto_1_preview.jpg`,
+    createdBy: 'admin1',
+    createdAt: serverTimestamp(),
+    ...overrides,
+  });
+
+  for (const album of ALBUMS) {
+    describe(album.label, () => {
+      test('el admin registra una foto válida (con o sin copia liviana)', async () => {
+        await assertSucceeds(setDoc(doc(db('admin'), `${album.collection}/culto_1`), photoData(album.folder)));
+        const { previewPath: _, ...sinCopia } = photoData(album.folder);
+        await assertSucceeds(setDoc(doc(db('admin'), `${album.collection}/culto_2`), sinCopia));
+      });
+
+      test('cualquier usuario con sesión ve las fotos, más recientes primero', async () => {
+        await setDoc(doc(db('admin'), `${album.collection}/culto_1`), photoData(album.folder));
+        for (const who of ['alice', 'presenter', 'admin']) {
+          await assertSucceeds(getDoc(doc(db(who), `${album.collection}/culto_1`)));
+          await assertSucceeds(getDocs(query(collection(db(who), album.collection), orderBy('createdAt', 'desc'))));
+        }
+      });
+
+      test('sin sesión no se ven las fotos', async () => {
+        await assertFails(getDocs(collection(db('unauth'), album.collection)));
+      });
+
+      test('el usuario y el presentador no pueden registrar ni borrar fotos', async () => {
+        await setDoc(doc(db('admin'), `${album.collection}/culto_1`), photoData(album.folder));
+        for (const [who, uid] of [['alice', 'alice'], ['presenter', 'presenter1']]) {
+          await assertFails(
+            setDoc(doc(db(who), `${album.collection}/culto_9`), photoData(album.folder, { createdBy: uid })),
+          );
+          await assertFails(deleteDoc(doc(db(who), `${album.collection}/culto_1`)));
+        }
+      });
+
+      test('el admin puede borrar una foto, pero no modificarla', async () => {
+        await setDoc(doc(db('admin'), `${album.collection}/culto_1`), photoData(album.folder));
+        await assertFails(
+          updateDoc(doc(db('admin'), `${album.collection}/culto_1`), { url: 'https://example.com/otra.jpg' }),
+        );
+        await assertSucceeds(deleteDoc(doc(db('admin'), `${album.collection}/culto_1`)));
+      });
+
+      const invalid = {
+        'el archivo es de otro álbum': { storagePath: 'sermon_photos/otro/culto_1.jpg' },
+        'el archivo está en otra carpeta': { storagePath: 'avatars/admin1/culto_1.jpg' },
+        'el archivo está en una subcarpeta': { storagePath: `${album.folder}/sub/culto_1.jpg` },
+        'la copia liviana es de otro álbum': { previewPath: 'mission_service_photos/otra/culto_1_preview.jpg' },
+        'la URL no es https': { url: 'http://firebasestorage.googleapis.com/x.jpg' },
+        'la URL del original no es https': { originalUrl: 'javascript:alert(1)' },
+        'firma otro usuario': { createdBy: 'someoneElse' },
+        'la fecha no es la del servidor': { createdAt: FIXED_CREATED_AT },
+        'trae campos de más': { featured: true },
+      };
+      for (const [reason, overrides] of Object.entries(invalid)) {
+        test(`rechaza una foto si ${reason}`, async () => {
+          await assertFails(setDoc(doc(db('admin'), `${album.collection}/culto_1`), photoData(album.folder, overrides)));
+        });
+      }
+
+      test('rechaza una foto sin archivo original', async () => {
+        const { storagePath: _, ...sinArchivo } = photoData(album.folder);
+        await assertFails(setDoc(doc(db('admin'), `${album.collection}/culto_1`), sinArchivo));
+      });
+    });
+  }
+});
+
 describe('user_passport/{uid}/journal', () => {
   test('el dueño puede crear, leer, actualizar y borrar entradas', async () => {
     const ref = doc(db('alice'), 'user_passport/alice/journal/j2');

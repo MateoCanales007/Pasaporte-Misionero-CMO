@@ -123,7 +123,12 @@ void main() {
     testWidgets('las fotos subidas se muestran', (tester) async {
       final deps = depsWith(UserRole.user);
       deps.servicePhotos.albums[const PhotoAlbum.mission('m1')] = [
-        const ServicePhoto(url: '', originalUrl: '', storagePath: 'mission_service_photos/m1/culto_1.jpg'),
+        const ServicePhoto(
+          id: 'culto_1',
+          url: '',
+          originalUrl: '',
+          storagePath: 'mission_service_photos/m1/culto_1.jpg',
+        ),
       ];
       await pumpTestApp(tester, const MissionDetailScreen(missionId: 'm1'), deps);
       await tester.scrollUntilVisible(find.text('Fotos del culto'), 300, scrollable: find.byType(Scrollable).first);

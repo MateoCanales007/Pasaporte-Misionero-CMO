@@ -20,8 +20,8 @@ Future<PickedImage?> pickImageForUpload(BuildContext context) async {
   final XFile? file;
   try {
     file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
-  } catch (_) {
-    if (context.mounted) showAppSnackBar(context, 'No se pudo abrir la galería.', type: SnackType.error);
+  } catch (error) {
+    if (context.mounted) _galleryFailed(context, error);
     return null;
   }
   if (file == null) return null;
@@ -46,8 +46,8 @@ Future<List<PickedImage>> pickImagesForUpload(BuildContext context, {int limit =
     files = original
         ? await ImagePicker().pickMultiImage(limit: limit)
         : await ImagePicker().pickMultiImage(maxWidth: 1600, imageQuality: 85, limit: limit);
-  } catch (_) {
-    if (context.mounted) showAppSnackBar(context, 'No se pudo abrir la galería.', type: SnackType.error);
+  } catch (error) {
+    if (context.mounted) _galleryFailed(context, error);
     return const [];
   }
   final picked = <PickedImage>[];
@@ -69,4 +69,9 @@ Future<List<PickedImage>> pickImagesForUpload(BuildContext context, {int limit =
     );
   }
   return picked;
+}
+
+void _galleryFailed(BuildContext context, Object error) {
+  debugPrint('No se pudo abrir la galería: $error');
+  showAppSnackBar(context, 'No se pudo abrir la galería. Inténtalo de nuevo.', type: SnackType.error);
 }

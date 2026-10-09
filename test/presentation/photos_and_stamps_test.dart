@@ -22,7 +22,7 @@ final _sermon = Sermon(
   publishedAt: DateTime.utc(2026, 10, 4, 18),
 );
 
-const _photo = ServicePhoto(url: '', originalUrl: '', storagePath: 'sermon_photos/s1/culto_1.jpg');
+const _photo = ServicePhoto(id: 'culto_1', url: '', originalUrl: '', storagePath: 'sermon_photos/s1/culto_1.jpg');
 
 void main() {
   setUpAll(initTestLocale);

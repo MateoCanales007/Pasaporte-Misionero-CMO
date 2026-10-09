@@ -21,7 +21,15 @@ class PhotoAlbum {
 
 /// Foto del culto subida por un administrador.
 class ServicePhoto {
-  const ServicePhoto({required this.url, required this.originalUrl, required this.storagePath, this.previewPath});
+  const ServicePhoto({
+    required this.id,
+    required this.url,
+    required this.originalUrl,
+    required this.storagePath,
+    this.previewPath,
+  });
+
+  final String id;
 
   /// Versión liviana para mostrar en la app (o el original si no hay copia).
   final String url;

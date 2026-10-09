@@ -8,9 +8,9 @@ abstract interface class ServicePhotoRepository {
   Future<List<ServicePhoto>> photos(PhotoAlbum album);
 
   /// Guarda el original sin pérdida de calidad y una copia liviana para la app.
-  Future<ServicePhoto> upload(PhotoAlbum album, Uint8List original, String contentType);
+  Future<ServicePhoto> upload(PhotoAlbum album, Uint8List original, String contentType, {required String editorUid});
 
-  Future<void> delete(ServicePhoto photo);
+  Future<void> delete(PhotoAlbum album, ServicePhoto photo);
 
   /// Bytes del archivo original (para guardarlo en la galería del teléfono).
   Future<Uint8List> originalBytes(ServicePhoto photo);
