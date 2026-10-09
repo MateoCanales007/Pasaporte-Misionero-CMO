@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/business_time.dart';
 import '../../../domain/models/mission.dart';
+import '../../../domain/models/service_photo.dart';
 import '../../providers/content_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/session_providers.dart';
@@ -14,11 +15,11 @@ import '../../widgets/app_network_image.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/map_view.dart';
+import '../../widgets/service_photos/service_photos_section.dart';
 import '../../widgets/state_views.dart';
 import '../journal/journal_entry_screen.dart';
 import 'mission_card.dart';
 import 'mission_form_screen.dart';
-import 'widgets/service_photos_section.dart';
 
 class MissionDetailScreen extends ConsumerWidget {
   const MissionDetailScreen({super.key, required this.missionId});
@@ -104,7 +105,7 @@ class MissionDetailScreen extends ConsumerWidget {
                       ),
                       _PlacePhotos(mission: mission),
                     ],
-                    ServicePhotosSection(mission: mission),
+                    ServicePhotosSection(album: PhotoAlbum.mission(mission.id)),
                   ],
                 ),
               ),

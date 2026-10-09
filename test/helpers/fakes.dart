@@ -12,6 +12,7 @@ import 'package:pasaporte_misionero_cmo/domain/models/pending_redemption.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/public_profile.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/qr_models.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/sermon.dart';
+import 'package:pasaporte_misionero_cmo/domain/models/service_photo.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/stamp_redemption.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/testimonial.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/user_role.dart';
@@ -20,6 +21,7 @@ import 'package:pasaporte_misionero_cmo/domain/repositories/community_repository
 import 'package:pasaporte_misionero_cmo/domain/repositories/mission_repository.dart';
 import 'package:pasaporte_misionero_cmo/domain/repositories/notification_repository.dart';
 import 'package:pasaporte_misionero_cmo/domain/repositories/sermon_repository.dart';
+import 'package:pasaporte_misionero_cmo/domain/repositories/service_photo_repository.dart';
 import 'package:pasaporte_misionero_cmo/domain/repositories/stamp_repository.dart';
 import 'package:pasaporte_misionero_cmo/domain/repositories/user_repository.dart';
 
@@ -117,30 +119,43 @@ class FakeMissionRepository implements MissionRepository {
       const UploadedImage(downloadUrl: 'https://example.com/img.jpg', storagePath: 'mission_images/x/img.jpg');
 }
 
-class FakeMissionPhotoRepository implements MissionPhotoRepository {
-  final photos = <String, List<MissionPhoto>>{};
-  final uploads = <String>[];
+class FakeServicePhotoRepository implements ServicePhotoRepository {
+  final albums = <PhotoAlbum, List<ServicePhoto>>{};
+  final uploads = <PhotoAlbum>[];
 
   @override
-  Future<List<MissionPhoto>> servicePhotos(String missionId) async => [...?photos[missionId]];
+  Future<List<ServicePhoto>> photos(PhotoAlbum album) async => [...?albums[album]];
 
   @override
-  Future<MissionPhoto> uploadServicePhoto(String missionId, Uint8List bytes, String contentType) async {
-    uploads.add(missionId);
-    final photo = MissionPhoto(
-      url: '',
-      originalUrl: '',
-      storagePath: 'mission_service_photos/$missionId/culto_${uploads.length}.jpg',
-    );
-    (photos[missionId] ??= []).insert(0, photo);
+  Future<ServicePhoto> upload(PhotoAlbum album, Uint8List original, String contentType) async {
+    uploads.add(album);
+    final photo = ServicePhoto(url: '', originalUrl: '', storagePath: '${album.ownerId}/culto_${uploads.length}.jpg');
+    (albums[album] ??= []).insert(0, photo);
     return photo;
   }
 
   @override
-  Future<void> deleteServicePhoto(MissionPhoto photo) async {
-    for (final list in photos.values) {
+  Future<void> delete(ServicePhoto photo) async {
+    for (final list in albums.values) {
       list.removeWhere((p) => p.storagePath == photo.storagePath);
     }
+  }
+
+  @override
+  Future<Uint8List> originalBytes(ServicePhoto photo) async => Uint8List(4);
+}
+
+class FakePhotoSaver implements PhotoSaver {
+  final saved = <String>[];
+  bool granted = true;
+
+  @override
+  bool get savesToGallery => true;
+
+  @override
+  Future<bool> saveToGallery(Uint8List bytes, {required String name}) async {
+    if (granted) saved.add(name);
+    return granted;
   }
 }
 

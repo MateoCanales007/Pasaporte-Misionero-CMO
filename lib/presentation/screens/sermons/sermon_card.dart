@@ -10,6 +10,7 @@ import '../../../domain/models/sermon.dart';
 import '../../widgets/app_network_image.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/dialogs.dart';
+import 'sermon_photos_screen.dart';
 
 /// Ícono de la plataforma de video (marca o enlace genérico).
 Widget platformIcon(VideoPlatform platform, {double size = 22}) {
@@ -149,6 +150,13 @@ class SermonCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => SermonPhotosScreen(sermon: sermon))),
+                  icon: const Icon(Icons.photo_library_rounded),
+                  label: const Text('Ver fotos'),
                 ),
                 if (adminActions != null) ...[const SizedBox(height: AppSpacing.md), adminActions!],
               ],

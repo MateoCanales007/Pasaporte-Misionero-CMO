@@ -9,6 +9,7 @@ import '../../domain/models/journal_entry.dart';
 import '../../domain/models/mission.dart';
 import '../../domain/models/public_profile.dart';
 import '../../domain/models/sermon.dart';
+import '../../domain/models/service_photo.dart';
 import '../../domain/models/stamp_redemption.dart';
 import '../../domain/models/testimonial.dart';
 import '../../domain/use_cases/achievements_calculator.dart';
@@ -51,9 +52,9 @@ final visibleMissionsProvider = Provider<AsyncValue<List<Mission>>>((ref) {
   });
 });
 
-/// Fotos del culto de una misión (se recargan tras subir o borrar).
-final servicePhotosProvider = FutureProvider.autoDispose.family<List<MissionPhoto>, String>(
-  (ref, missionId) => ref.watch(missionPhotoRepositoryProvider).servicePhotos(missionId),
+/// Fotos del culto de un álbum (misión o prédica); se recargan tras subir o borrar.
+final servicePhotosProvider = FutureProvider.autoDispose.family<List<ServicePhoto>, PhotoAlbum>(
+  (ref, album) => ref.watch(servicePhotoRepositoryProvider).photos(album),
 );
 
 // ------------------------------------------------------------------ Pasaporte

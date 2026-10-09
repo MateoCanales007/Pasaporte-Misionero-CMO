@@ -40,7 +40,8 @@ class TestDeps {
   final FakeUserRepository users;
   final missions = FakeMissionRepository();
   final places = FakePlacesRepository();
-  final missionPhotos = FakeMissionPhotoRepository();
+  final servicePhotos = FakeServicePhotoRepository();
+  final photoSaver = FakePhotoSaver();
   final stamps = FakeStampRepository();
   final pending = InMemoryPendingStore();
   final sermons = FakeSermonRepository();
@@ -55,7 +56,8 @@ class TestDeps {
     userRepositoryProvider.overrideWithValue(users),
     missionRepositoryProvider.overrideWithValue(missions),
     placesRepositoryProvider.overrideWithValue(places),
-    missionPhotoRepositoryProvider.overrideWithValue(missionPhotos),
+    servicePhotoRepositoryProvider.overrideWithValue(servicePhotos),
+    photoSaverProvider.overrideWithValue(photoSaver),
     stampRepositoryProvider.overrideWithValue(stamps),
     pendingRedemptionStoreProvider.overrideWithValue(pending),
     sermonRepositoryProvider.overrideWithValue(sermons),

@@ -158,16 +158,3 @@ class PlaceSuggestion {
   final String placeId;
   final String description;
 }
-
-/// Foto del culto misionero subida por un administrador.
-class MissionPhoto {
-  const MissionPhoto({required this.url, required this.originalUrl, required this.storagePath, this.previewPath});
-
-  /// Versión liviana para mostrar en la app (o el original si no hay copia).
-  final String url;
-
-  /// Archivo original en su calidad completa, para descargar.
-  final String originalUrl;
-  final String storagePath;
-  final String? previewPath;
-}

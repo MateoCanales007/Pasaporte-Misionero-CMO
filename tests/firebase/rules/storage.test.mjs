@@ -170,3 +170,18 @@ describe('Storage: fotos del culto', () => {
     await assertSucceeds(deleteObject(ref(storage('admin'), 'mission_service_photos/m1/culto_1.jpg')));
   });
 });
+
+describe('Storage: fotos del culto de las prédicas', () => {
+  test('un usuario autenticado puede listar; sin sesión no', async () => {
+    await assertSucceeds(listAll(ref(storage('alice'), 'sermon_photos/s1')));
+    await assertFails(listAll(ref(storage('unauth'), 'sermon_photos/s1')));
+  });
+
+  test('solo el administrador sube y borra fotos de una prédica', async () => {
+    await assertFails(upload('alice', 'sermon_photos/s1/culto_1.jpg'));
+    await assertFails(upload('presenter', 'sermon_photos/s1/culto_1.jpg'));
+    await assertSucceeds(upload('admin', 'sermon_photos/s1/culto_1.jpg'));
+    await assertFails(deleteObject(ref(storage('alice'), 'sermon_photos/s1/culto_1.jpg')));
+    await assertSucceeds(deleteObject(ref(storage('admin'), 'sermon_photos/s1/culto_1.jpg')));
+  });
+});

@@ -24,14 +24,3 @@ abstract interface class PlacesRepository {
 
   Future<Uint8List> photo(String photoReference);
 }
-
-/// Fotos del culto de cada misión (Storage). Solo los administradores suben o borran.
-abstract interface class MissionPhotoRepository {
-  /// Más recientes primero.
-  Future<List<MissionPhoto>> servicePhotos(String missionId);
-
-  /// Guarda el original sin pérdida de calidad y una copia liviana para la app.
-  Future<MissionPhoto> uploadServicePhoto(String missionId, Uint8List original, String contentType);
-
-  Future<void> deleteServicePhoto(MissionPhoto photo);
-}

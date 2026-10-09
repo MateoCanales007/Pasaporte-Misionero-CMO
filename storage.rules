@@ -52,6 +52,16 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // Fotos del culto de cada prédica: mismas reglas que las de las misiones.
+    match /sermon_photos/{sermonId}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.contentType.matches('^image/(jpeg|png|webp)$')
+        && isSafeFileName(fileName);
+      allow delete: if isAdmin();
+    }
+
     // Cualquier otra ruta: denegada (no hay regla que la permita).
   }
 }

@@ -2,19 +2,20 @@ import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../../core/errors/app_exception.dart';
 import '../../core/utils/image_preview.dart';
 import '../../core/utils/image_rules.dart';
-import '../../domain/models/mission.dart';
 import '../../domain/models/sermon.dart';
-import '../../domain/repositories/mission_repository.dart';
+import '../../domain/models/service_photo.dart';
+import '../../domain/repositories/service_photo_repository.dart';
 import '../firebase_error_mapper.dart';
 import '../storage_upload.dart';
 
-/// Fotos del culto en `mission_service_photos/{missionId}/`:
-/// `culto_<ms>.<ext>` (original, alta calidad) y `culto_<ms>_preview.jpg`
-/// (copia liviana que se muestra en la app).
-class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
-  FirebaseMissionPhotoRepository(this._storage, {Future<Uint8List?> Function(Uint8List)? previewBuilder})
+/// Fotos del culto en Storage, por álbum:
+/// `<carpeta>/culto_<ms>.<ext>` (original, alta calidad) y
+/// `<carpeta>/culto_<ms>_preview.jpg` (copia liviana que se muestra en la app).
+class FirebaseServicePhotoRepository implements ServicePhotoRepository {
+  FirebaseServicePhotoRepository(this._storage, {Future<Uint8List?> Function(Uint8List)? previewBuilder})
     : _previewBuilder = previewBuilder ?? buildImagePreview;
 
   static const _previewSuffix = '_preview';
@@ -22,7 +23,10 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
   final FirebaseStorage _storage;
   final Future<Uint8List?> Function(Uint8List) _previewBuilder;
 
-  String _folder(String missionId) => 'mission_service_photos/$missionId';
+  static String folderOf(PhotoAlbum album) => switch (album.kind) {
+    PhotoAlbumKind.mission => 'mission_service_photos/${album.ownerId}',
+    PhotoAlbumKind.sermon => 'sermon_photos/${album.ownerId}',
+  };
 
   static String _baseName(String fileName) {
     final dot = fileName.lastIndexOf('.');
@@ -30,9 +34,9 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
   }
 
   @override
-  Future<List<MissionPhoto>> servicePhotos(String missionId) {
+  Future<List<ServicePhoto>> photos(PhotoAlbum album) {
     return guardFirebase(() async {
-      final items = (await _storage.ref(_folder(missionId)).listAll()).items;
+      final items = (await _storage.ref(folderOf(album)).listAll()).items;
       final previews = {
         for (final item in items)
           if (_baseName(item.name).endsWith(_previewSuffix)) _baseName(item.name): item,
@@ -43,7 +47,7 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
         originals.map((original) async {
           final preview = previews['${_baseName(original.name)}$_previewSuffix'];
           final originalUrl = await original.getDownloadURL();
-          return MissionPhoto(
+          return ServicePhoto(
             url: preview == null ? originalUrl : await preview.getDownloadURL(),
             originalUrl: originalUrl,
             storagePath: original.fullPath,
@@ -55,11 +59,12 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
   }
 
   @override
-  Future<MissionPhoto> uploadServicePhoto(String missionId, Uint8List original, String contentType) async {
+  Future<ServicePhoto> upload(PhotoAlbum album, Uint8List original, String contentType) async {
+    final folder = folderOf(album);
     final base = 'culto_${DateTime.now().millisecondsSinceEpoch}';
     final uploaded = await uploadImage(
       _storage,
-      folder: _folder(missionId),
+      folder: folder,
       baseName: 'culto',
       fileName: base,
       bytes: original,
@@ -73,7 +78,7 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
       try {
         preview = await uploadImage(
           _storage,
-          folder: _folder(missionId),
+          folder: folder,
           baseName: 'culto',
           fileName: '$base$_previewSuffix',
           bytes: previewBytes,
@@ -83,7 +88,7 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
         // Sin copia liviana la app muestra el original.
       }
     }
-    return MissionPhoto(
+    return ServicePhoto(
       url: preview?.downloadUrl ?? uploaded.downloadUrl,
       originalUrl: uploaded.downloadUrl,
       storagePath: uploaded.storagePath,
@@ -92,7 +97,7 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
   }
 
   @override
-  Future<void> deleteServicePhoto(MissionPhoto photo) {
+  Future<void> delete(ServicePhoto photo) {
     return guardFirebase(() async {
       await _storage.ref(photo.storagePath).delete();
       final preview = photo.previewPath;
@@ -103,6 +108,15 @@ class FirebaseMissionPhotoRepository implements MissionPhotoRepository {
           // La copia liviana pudo no existir; el original ya se eliminó.
         }
       }
+    });
+  }
+
+  @override
+  Future<Uint8List> originalBytes(ServicePhoto photo) {
+    return guardFirebase(() async {
+      final bytes = await _storage.ref(photo.storagePath).getData(maxOriginalPhotoBytes);
+      if (bytes == null) throw const NotFoundException('No se encontró la foto.');
+      return bytes;
     });
   }
 }

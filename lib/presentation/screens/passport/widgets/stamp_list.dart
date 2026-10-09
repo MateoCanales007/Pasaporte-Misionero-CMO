@@ -9,6 +9,7 @@ import '../../../providers/content_providers.dart';
 import '../../../widgets/app_network_image.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../widgets/state_views.dart';
+import '../../missions/mission_detail_screen.dart';
 
 /// Lista de sellos confirmados por el servidor.
 class StampList extends StatelessWidget {
@@ -76,37 +77,49 @@ class StampTile extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Semantics(
-        label: showDate ? 'Sello de $name, obtenido el $date. Confirmado.' : 'Sello de $name.',
+        button: true,
+        label: showDate
+            ? 'Sello de $name, obtenido el $date. Confirmado. Toca para ver la misión.'
+            : 'Sello de $name. Toca para ver la misión.',
         excludeSemantics: true,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                child: AppNetworkImage(
-                  url: mission?.imageUrl ?? '',
-                  width: 72,
-                  height: 72,
-                  fallbackIcon: Icons.flight_land_rounded,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => MissionDetailScreen(missionId: stamp.missionId)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  child: AppNetworkImage(
+                    url: mission?.imageUrl ?? '',
+                    width: 72,
+                    height: 72,
+                    fallbackIcon: Icons.flight_land_rounded,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: theme.textTheme.titleMedium?.copyWith(color: AppColors.navy)),
-                    if (showDate) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(date, style: theme.textTheme.bodySmall),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: theme.textTheme.titleMedium?.copyWith(color: AppColors.navy)),
+                      if (showDate) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(date, style: theme.textTheme.bodySmall),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.verified_rounded, color: AppColors.gold, size: 30),
-            ],
+                const Icon(Icons.verified_rounded, color: AppColors.gold, size: 30),
+                const SizedBox(width: AppSpacing.xs),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+              ],
+            ),
           ),
         ),
       ),

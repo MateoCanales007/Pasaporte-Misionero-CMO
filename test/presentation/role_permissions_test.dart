@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/mission.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/public_profile.dart';
+import 'package:pasaporte_misionero_cmo/domain/models/service_photo.dart';
 import 'package:pasaporte_misionero_cmo/domain/models/user_role.dart';
 import 'package:pasaporte_misionero_cmo/presentation/screens/community/user_detail_screen.dart';
 import 'package:pasaporte_misionero_cmo/presentation/screens/home/home_screen.dart';
@@ -121,8 +122,8 @@ void main() {
 
     testWidgets('las fotos subidas se muestran', (tester) async {
       final deps = depsWith(UserRole.user);
-      deps.missionPhotos.photos['m1'] = [
-        const MissionPhoto(url: '', originalUrl: '', storagePath: 'mission_service_photos/m1/culto_1.jpg'),
+      deps.servicePhotos.albums[const PhotoAlbum.mission('m1')] = [
+        const ServicePhoto(url: '', originalUrl: '', storagePath: 'mission_service_photos/m1/culto_1.jpg'),
       ];
       await pumpTestApp(tester, const MissionDetailScreen(missionId: 'm1'), deps);
       await tester.scrollUntilVisible(find.text('Fotos del culto'), 300, scrollable: find.byType(Scrollable).first);

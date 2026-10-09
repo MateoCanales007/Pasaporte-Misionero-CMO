@@ -11,9 +11,10 @@ import '../../data/datasources/connectivity_network_status.dart';
 import '../../data/datasources/shared_prefs_pending_redemption_store.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
 import '../../data/repositories/firebase_community_repository.dart';
-import '../../data/repositories/firebase_mission_photo_repository.dart';
+import '../../data/datasources/gal_photo_saver.dart';
 import '../../data/repositories/firebase_mission_repository.dart';
 import '../../data/repositories/firebase_notification_repository.dart';
+import '../../data/repositories/firebase_service_photo_repository.dart';
 import '../../data/repositories/firebase_sermon_repository.dart';
 import '../../data/repositories/firebase_stamp_repository.dart';
 import '../../data/repositories/firebase_user_repository.dart';
@@ -22,6 +23,7 @@ import '../../domain/repositories/community_repository.dart';
 import '../../domain/repositories/mission_repository.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../../domain/repositories/sermon_repository.dart';
+import '../../domain/repositories/service_photo_repository.dart';
 import '../../domain/repositories/stamp_repository.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../domain/use_cases/redeem_stamp_use_case.dart';
@@ -52,9 +54,11 @@ final missionRepositoryProvider = Provider<MissionRepository>(
       FirebaseMissionRepository(FirebaseFirestore.instance, ref.watch(_functionsProvider), FirebaseStorage.instance),
 );
 
-final missionPhotoRepositoryProvider = Provider<MissionPhotoRepository>(
-  (ref) => FirebaseMissionPhotoRepository(FirebaseStorage.instance),
+final servicePhotoRepositoryProvider = Provider<ServicePhotoRepository>(
+  (ref) => FirebaseServicePhotoRepository(FirebaseStorage.instance),
 );
+
+final photoSaverProvider = Provider<PhotoSaver>((ref) => GalPhotoSaver());
 
 final placesRepositoryProvider = Provider<PlacesRepository>(
   (ref) => FirebasePlacesRepository(ref.watch(_functionsProvider)),

@@ -167,7 +167,8 @@ Lectura: autenticado si `active == true`; admin siempre.
 |---|---|---|
 | `sermon_covers/{sermonId}/{file}` | autenticado | admin; `image/(jpeg\|png\|webp)`; < 5 MB |
 | `mission_images/{missionId}/{file}` | autenticado | admin; `image/(jpeg\|png\|webp)`; < 5 MB |
-| `mission_service_photos/{missionId}/{file}` (fotos del culto; se listan) | autenticado | admin; `image/(jpeg\|png\|webp)`; < 5 MB |
+| `mission_service_photos/{missionId}/{file}` (fotos del culto de la misión; se listan) | autenticado | admin; `image/(jpeg\|png\|webp)`; original < 25 MB |
+| `sermon_photos/{sermonId}/{file}` (fotos del culto de la prédica; se listan) | autenticado | admin; `image/(jpeg\|png\|webp)`; original < 25 MB |
 | todo lo demás | no | no |
 
 ## 5. Token QR
