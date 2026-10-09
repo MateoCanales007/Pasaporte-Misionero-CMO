@@ -44,3 +44,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+storage-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+*.local
+.runtimeconfig.json
+functions/node_modules/
+functions/lib/
+functions/build-test/
+tests/firebase/node_modules/

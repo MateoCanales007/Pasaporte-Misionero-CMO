@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. REGLAS PARA EL CATÁLOGO DE CÉLULAS Y SELLOS
+    match /cell/{document=**} {
+      // Cualquiera puede leer el catálogo de células para llenar el Dropdown
+      // No permitimos escritura para que nadie borre las células desde la app.
+      allow read: if true; 
+      allow write: if false;
+    }
+    
+    match /stamp/{document=**} {
+      // Solo los usuarios que ya iniciaron sesión pueden ver el catálogo de sellos
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 2. REGLAS PARA EL PASAPORTE DEL USUARIO
+    match /user_passport/{userId} {
+      // LECTURA: Permitimos que cualquiera lea. 
+      // ¿Por qué? Porque ANTES de iniciar sesión, tu app necesita hacer un 
+      // .where('username', isEqualTo: cleanUsername) para saber si el usuario existe.
+      allow read: if true;
+      
+      // ESCRITURA: Regla de oro de Clean Architecture.
+      // Un usuario SOLO puede crear o modificar su propio documento de pasaporte.
+      // Así evitamos que alguien se asigne un "sello" en el pasaporte de otra persona.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
